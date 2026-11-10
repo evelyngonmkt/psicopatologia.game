@@ -9,6 +9,7 @@ import {
 type Player = { name: string; symbol: "X" | "O" };
 type Card = { id: number; pair: string; face: string; label: string; kind: "mark" | "surprise" };
 type Tab = "game" | "academic";
+type SavedMatch = { id: string; savedAt: string; player1_name: string; player2_name: string; player1_metrics: AcademicMetrics; player2_metrics: AcademicMetrics; };
 
 const iconPairs = [
   { pair: "x", face: "X", label: "Símbolo X", kind: "mark" as const },
@@ -71,6 +72,15 @@ export default function App() {
   const [player2Name, setPlayer2Name] = useState("");
   const [observations, setObservations] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => {
+    try { return JSON.parse(localStorage.getItem("psicopatologia_saved_matches") || "[]").slice(0, 5) as SavedMatch[]; }
+    catch { return []; }
+  });
+  const [selectedSavedMatchId, setSelectedSavedMatchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("psicopatologia_saved_matches", JSON.stringify(savedMatches));
+  }, [savedMatches]);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -93,28 +103,58 @@ export default function App() {
     finally { setAcademicBusy(false); }
   }
 
+  function saveCurrentMatch() {
+    if (!started) return;
+    if (savedMatches.length >= 5) {
+      setMessage("Você já salvou 5 partidas. A administração precisa registrar ou remover uma delas antes de salvar outra.");
+      return;
+    }
+    const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
+    const snapshot: SavedMatch = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      savedAt: new Date().toISOString(),
+      player1_name: players[0].name.trim() || "Jogador 1",
+      player2_name: players[1].name.trim() || "Jogador 2",
+      player1_metrics: toMetrics(metrics[0]),
+      player2_metrics: toMetrics(metrics[1])
+    };
+    setSavedMatches((current) => [...current, snapshot]);
+    setMessage(`Partida de ${snapshot.player1_name} e ${snapshot.player2_name} salva para avaliação.`);
+  }
+
+  function selectSavedMatch(match: SavedMatch) {
+    setSelectedSavedMatchId(match.id);
+    setEditingId(null);
+    setPlayer1Name(match.player1_name);
+    setPlayer2Name(match.player2_name);
+    setObservations("");
+    setAcademicError("");
+  }
+
   async function handleSaveEvaluation(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (!session) return;
     setAcademicBusy(true); setAcademicError("");
     const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
     try {
       const existing = editingId ? evaluations.find((item) => item.id === editingId) : undefined;
+      const selectedMatch = selectedSavedMatchId ? savedMatches.find((item) => item.id === selectedSavedMatchId) : undefined;
       await academicApi.saveEvaluation(session, {
         id: editingId,
         player1_name: player1Name.trim() || players[0].name,
         player2_name: player2Name.trim() || players[1].name,
-        player1_metrics: existing?.player1_metrics || toMetrics(metrics[0]),
-        player2_metrics: existing?.player2_metrics || toMetrics(metrics[1]),
+        player1_metrics: selectedMatch?.player1_metrics || existing?.player1_metrics || toMetrics(metrics[0]),
+        player2_metrics: selectedMatch?.player2_metrics || existing?.player2_metrics || toMetrics(metrics[1]),
         observations
       });
       setEvaluations(await academicApi.listEvaluations(session));
-      setPlayer1Name(""); setPlayer2Name(""); setObservations(""); setEditingId(null);
+      if (selectedMatch) setSavedMatches((current) => current.filter((item) => item.id !== selectedMatch.id));
+      setPlayer1Name(""); setPlayer2Name(""); setObservations(""); setEditingId(null); setSelectedSavedMatchId(null);
     } catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível salvar."); }
     finally { setAcademicBusy(false); }
   }
 
   function editEvaluation(item: AcademicEvaluation) {
-    setEditingId(item.id); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(item.observations || "");
+    setEditingId(item.id); setSelectedSavedMatchId(null); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(item.observations || "");
   }
 
   async function removeEvaluation(id: string) {
@@ -255,6 +295,7 @@ export default function App() {
                 {players.map((p, i) => <div className="performance-card" key={p.symbol}><strong>{p.name}</strong><span>{metrics[i].pairs} pares encontrados</span><span>{metrics[i].errors} tentativas sem par</span><span>{metrics[i].moves} jogadas no tabuleiro</span><small>Precisão nas tentativas: {metrics[i].attempts ? Math.round(metrics[i].pairs / metrics[i].attempts * 100) : 0}%</small></div>)}
               </div>
               <div className="game-message">{pendingMove ? <Sparkles size={17}/> : <Brain size={17}/>} {message}</div>
+              <div className="setup-actions"><button className="primary" onClick={saveCurrentMatch} disabled={!started || !metrics.some((item) => item.attempts > 0 || item.moves > 0) || savedMatches.length >= 5}>Salvar partida para avaliação ({savedMatches.length}/5)</button></div>
               <button className="secondary reset-button" onClick={resetRound}><RotateCcw size={17}/> Reiniciar rodada</button>
             </section>
 
@@ -293,8 +334,17 @@ export default function App() {
               <button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Entrando..." : "Entrar na área acadêmica"}</button>
             </form> : <div className="academic-dashboard">
               <div className="academic-dashboard-head"><div><p className="eyebrow purple">AMBIENTE DAS AVALIADORAS</p><h2>Registros e observações</h2><p>Sessão: {session.email}</p></div><button className="secondary" onClick={logoutAcademic}>Sair</button></div>
+              <section className="pending-matches">
+                <div className="pending-matches-heading"><h3>Partidas aguardando avaliação</h3><span>{savedMatches.length}/5 salvas</span></div>
+                <p>As partidas ficam guardadas neste dispositivo até serem registradas no histórico acadêmico.</p>
+                {savedMatches.length === 0 ? <p className="pending-empty">Nenhuma partida aguardando avaliação. Salve uma partida na tela do jogo para trazê-la para cá.</p> : savedMatches.map((match) => <article className="pending-match" key={match.id}>
+                  <div className="pending-match-data"><strong>{match.player1_name} × {match.player2_name}</strong><small>{new Date(match.savedAt).toLocaleString("pt-BR")}</small><small>Jogador 1: {match.player1_metrics.pairs} pares · {match.player1_metrics.errors} erros · {match.player1_metrics.moves} jogadas · {match.player1_metrics.precision}% de precisão</small><small>Jogador 2: {match.player2_metrics.pairs} pares · {match.player2_metrics.errors} erros · {match.player2_metrics.moves} jogadas · {match.player2_metrics.precision}% de precisão</small></div>
+                  <button type="button" className="secondary" onClick={() => selectSavedMatch(match)}>Avaliar esta partida</button>
+                </article>)}
+              </section>
               <form className="evaluation-form" onSubmit={handleSaveEvaluation}>
-                <h3>{editingId ? "Editar avaliação" : "Nova avaliação"}</h3>
+                <h3>{editingId ? "Editar avaliação" : selectedSavedMatchId ? "Avaliar partida salva" : "Nova avaliação"}</h3>
+                {selectedSavedMatchId && <p className="selected-match-note">Os indicadores desta avaliação serão os dados capturados quando a partida foi salva.</p>}
                 <div className="player-fields">
                   <label className="field"><span>NOME DO JOGADOR 1</span><input value={player1Name} onChange={e=>setPlayer1Name(e.target.value)} placeholder={players[0].name}/></label>
                   <label className="field"><span>NOME DO JOGADOR 2</span><input value={player2Name} onChange={e=>setPlayer2Name(e.target.value)} placeholder={players[1].name}/></label>
@@ -302,7 +352,7 @@ export default function App() {
                 <label className="field"><span>OBSERVAÇÕES, TEXTOS E AVALIAÇÃO</span><textarea rows={5} value={observations} onChange={e=>setObservations(e.target.value)} placeholder="Registre observações sobre atenção, memória, percepção, estratégia e comportamentos observados..."/></label>
                 <p className="academic-disclaimer">Os indicadores da partida são comportamentais e didáticos; não constituem diagnóstico nem avaliação neuropsicológica.</p>
                 {academicError && <p className="academic-error" role="alert">{academicError}</p>}
-                <div className="setup-actions"><button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar avaliação"}</button>{editingId && <button type="button" className="secondary" onClick={()=>{setEditingId(null);setPlayer1Name("");setPlayer2Name("");setObservations("");}}>Cancelar edição</button>}</div>
+                <div className="setup-actions"><button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar avaliação"}</button>{(editingId || selectedSavedMatchId) && <button type="button" className="secondary" onClick={()=>{setEditingId(null);setSelectedSavedMatchId(null);setPlayer1Name("");setPlayer2Name("");setObservations("");}}>Cancelar</button>}</div>
               </form>
               <div className="saved-evaluations"><h3>Avaliações registradas</h3>{academicBusy && <p>Carregando...</p>}{!academicBusy && evaluations.length===0 && <p>Nenhuma avaliação salva ainda.</p>}
                 {evaluations.map(item=><article className="saved-evaluation" key={item.id}><div><strong>{item.player1_name} × {item.player2_name}</strong><small>{new Date(item.created_at).toLocaleString("pt-BR")}</small><p>{item.observations || "Sem observações."}</p><small>Jogador 1: {item.player1_metrics?.pairs ?? 0} pares · {item.player1_metrics?.errors ?? 0} erros · {item.player1_metrics?.moves ?? 0} jogadas · {item.player1_metrics?.precision ?? 0}% de precisão</small><small>Jogador 2: {item.player2_metrics?.pairs ?? 0} pares · {item.player2_metrics?.errors ?? 0} erros · {item.player2_metrics?.moves ?? 0} jogadas · {item.player2_metrics?.precision ?? 0}% de precisão</small></div><div className="saved-actions"><button className="secondary" onClick={()=>editEvaluation(item)}>Editar</button><button className="text-button" onClick={()=>removeEvaluation(item.id)}>Excluir</button></div></article>)}
