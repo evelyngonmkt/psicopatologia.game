@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { academicApi, type AcademicEvaluation, type AcademicMetrics, type AcademicSession } from "./lib/academicApi";
 import {
   Brain, BookOpen, CircleHelp, Eye, Lightbulb, RotateCcw, Sparkles,
@@ -85,7 +86,7 @@ export default function App() {
     academicApi.listEvaluations(session).then(setEvaluations).catch((error: Error) => setAcademicError(error.message)).finally(() => setAcademicBusy(false));
   }, [tab, session]);
 
-  async function handleAcademicLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleAcademicLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setAcademicBusy(true); setAcademicError("");
     try { const next = await academicApi.signIn(loginEmail.trim(), loginPassword); setSession(next); setLoginPassword(""); setLoginEmail(""); }
     catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível entrar."); }
