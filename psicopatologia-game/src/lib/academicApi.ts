@@ -66,7 +66,7 @@ function saveSession(session: AcademicSession) {
 
 async function refreshSession(session: AcademicSession): Promise<AcademicSession> {
   if (session.expires_at > Math.floor(Date.now() / 1000) + 60) return session;
-  const response = await fetch(\`\${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token\`, {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
     method: "POST",
     headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: session.refresh_token })
@@ -90,11 +90,11 @@ async function refreshSession(session: AcademicSession): Promise<AcademicSession
 
 async function request(path: string, session: AcademicSession, options: RequestInit = {}) {
   ensureConfig();
-  const response = await fetch(\`\${SUPABASE_URL}/rest/v1/\${path}\`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
       apikey: SUPABASE_KEY,
-      Authorization: \`Bearer \${session.access_token}\`,
+      Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
       Prefer: "return=representation",
       ...options.headers
@@ -118,7 +118,7 @@ export const academicApi = {
     ensureConfig();
     const normalizedEmail = email.toLowerCase();
     if (!ALLOWED_EMAILS.includes(normalizedEmail)) throw new Error("Este e-mail não está autorizado a acessar a área acadêmica.");
-    const response = await fetch(\`\${SUPABASE_URL}/auth/v1/token?grant_type=password\`, {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ email: normalizedEmail, password })
@@ -140,9 +140,9 @@ export const academicApi = {
   async signOut() {
     const session = readSession();
     if (session && SUPABASE_URL && SUPABASE_KEY) {
-      await fetch(\`\${SUPABASE_URL}/auth/v1/logout\`, {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
         method: "POST",
-        headers: { apikey: SUPABASE_KEY, Authorization: \`Bearer \${session.access_token}\` }
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}` }
       }).catch(() => undefined);
     }
     localStorage.removeItem(SESSION_KEY);
@@ -162,7 +162,7 @@ export const academicApi = {
       observations: input.observations
     };
     if (input.id) {
-      return request(\`academic_evaluations?id=eq.\${encodeURIComponent(input.id)}\`, session, {
+      return request(`academic_evaluations?id=eq.${encodeURIComponent(input.id)}`, session, {
         method: "PATCH",
         body: JSON.stringify(payload)
       });
@@ -174,6 +174,6 @@ export const academicApi = {
   },
 
   async deleteEvaluation(session: AcademicSession, id: string) {
-    return request(\`academic_evaluations?id=eq.\${encodeURIComponent(id)}\`, session, { method: "DELETE" });
+    return request(`academic_evaluations?id=eq.${encodeURIComponent(id)}`, session, { method: "DELETE" });
   }
 };
