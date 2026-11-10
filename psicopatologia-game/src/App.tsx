@@ -52,6 +52,7 @@ export default function App() {
   const [matched, setMatched] = useState<number[]>([]);
   const [board, setBoard] = useState<(string | null)[]>(Array(9).fill(null));
   const [scores, setScores] = useState([0, 0]);
+  const [metrics, setMetrics] = useState([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
   const [turn, setTurn] = useState(0);
   const [pendingMove, setPendingMove] = useState(false);
   const [message, setMessage] = useState("Clique em “Embaralhar e começar” para iniciar a partida.");
@@ -98,6 +99,7 @@ export default function App() {
     if (next.length === 2) {
       const first = deck.find((c) => c.id === next[0])!;
       const second = deck.find((c) => c.id === next[1])!;
+      setMetrics((prev) => prev.map((item, i) => i === turn ? { ...item, attempts: item.attempts + 1, ...(first.pair === second.pair ? { pairs: item.pairs + 1 } : { errors: item.errors + 1 }) } : item));
       if (first.pair === second.pair) {
         window.setTimeout(() => {
           setMatched((prev) => [...prev, ...next]);
@@ -120,18 +122,19 @@ export default function App() {
   function placeMark(index: number) {
     if (!pendingMove || board[index] || roundOver) return;
     const next = [...board]; next[index] = players[turn].symbol; setBoard(next);
+    setMetrics((prev) => prev.map((item, i) => i === turn ? { ...item, moves: item.moves + 1 } : item));
     setPendingMove(false);
     if (!next.every(Boolean)) setMessage(`${players[turn].name}, jogada registrada! Continue encontrando pares.`);
   }
 
   function resetRound() {
     setBoard(Array(9).fill(null)); setDeck(makeDeck()); setFlipped([]); setMatched([]);
-    setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true);
+    setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
     setMessage(`${players[0].name} começa uma nova rodada!`);
   }
 
   function resetAll() {
-    setStarted(false); setScores([0, 0]); setBoard(Array(9).fill(null)); setDeck(makeDeck());
+    setStarted(false); setScores([0, 0]); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]); setBoard(Array(9).fill(null)); setDeck(makeDeck());
     setFlipped([]); setMatched([]); setTurn(0); setPendingMove(false); setRoundOver(false);
     setMessage("Clique em “Embaralhar e começar” para iniciar a partida.");
   }
@@ -186,6 +189,9 @@ export default function App() {
               <div className="score-grid">
                 {players.map((p, i) => <div className="score-card" key={p.symbol}><span>{scores[i]}</span><small>{p.name} · {p.symbol}</small></div>)}
               </div>
+              <div className="performance-grid" aria-label="Indicadores da partida">
+                {players.map((p, i) => <div className="performance-card" key={p.symbol}><strong>{p.name}</strong><span>{metrics[i].pairs} pares encontrados</span><span>{metrics[i].errors} tentativas sem par</span><span>{metrics[i].moves} jogadas no tabuleiro</span><small>Precisão nas tentativas: {metrics[i].attempts ? Math.round(metrics[i].pairs / metrics[i].attempts * 100) : 0}%</small></div>)}
+              </div>
               <div className="game-message">{pendingMove ? <Sparkles size={17}/> : <Brain size={17}/>} {message}</div>
               <button className="secondary reset-button" onClick={resetRound}><RotateCcw size={17}/> Reiniciar rodada</button>
             </section>
@@ -205,7 +211,7 @@ export default function App() {
             </section>
           </div>
 
-          <div className="tip"><Lightbulb size={20}/><span><strong>Dica:</strong> preste atenção também nas cartas viradas pelo outro jogador. Sua memória pode guardar informações mesmo quando não é sua vez!</span></div>
+          <div className="tip"><Lightbulb size={20}/><span><strong>Indicadores de desempenho:</strong> os dados mostram resultados observáveis durante esta partida — tentativas, pares, erros e jogadas. Eles são recursos didáticos, não testes neuropsicológicos ou diagnósticos, e não medem diretamente a atividade do hipocampo.</span></div>
           <section className="panel psychology-strip"><div className="psych-title"><h2>Um toque de Psicologia</h2><span>✦</span></div><div className="concept-chips"><span>Memória em ação 🧠</span><span>Atenção seletiva ativada 👀</span><span>Aprendizagem em construção ✨</span><span>Ψ Psicologia em jogo!</span></div></section>
         </section>
       ) : (
