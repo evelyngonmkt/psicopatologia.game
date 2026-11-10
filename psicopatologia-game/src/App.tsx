@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { academicApi, type AcademicEvaluation, type AcademicMetrics, type AcademicSession } from "./lib/academicApi";
 import {
   Brain, BookOpen, CircleHelp, Eye, Lightbulb, RotateCcw, Sparkles,
   Wifi, WifiOff, X, Check, ChevronRight, Heart, Target
@@ -59,6 +60,16 @@ export default function App() {
   const [roundOver, setRoundOver] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
   const [showRules, setShowRules] = useState(false);
+  const [session, setSession] = useState<AcademicSession | null>(() => academicApi.getSession());
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [academicBusy, setAcademicBusy] = useState(false);
+  const [academicError, setAcademicError] = useState("");
+  const [evaluations, setEvaluations] = useState<AcademicEvaluation[]>([]);
+  const [player1Name, setPlayer1Name] = useState("");
+  const [player2Name, setPlayer2Name] = useState("");
+  const [observations, setObservations] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -67,6 +78,54 @@ export default function App() {
     window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, []);
+
+  useEffect(() => {
+    if (tab !== "academic" || !session) return;
+    setAcademicBusy(true);
+    academicApi.listEvaluations(session).then(setEvaluations).catch((error: Error) => setAcademicError(error.message)).finally(() => setAcademicBusy(false));
+  }, [tab, session]);
+
+  async function handleAcademicLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); setAcademicBusy(true); setAcademicError("");
+    try { const next = await academicApi.signIn(loginEmail.trim(), loginPassword); setSession(next); setLoginPassword(""); setLoginEmail(""); }
+    catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível entrar."); }
+    finally { setAcademicBusy(false); }
+  }
+
+  async function handleSaveEvaluation(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); if (!session) return;
+    setAcademicBusy(true); setAcademicError("");
+    const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
+    try {
+      await academicApi.saveEvaluation(session, {
+        id: editingId,
+        player1_name: player1Name.trim() || players[0].name,
+        player2_name: player2Name.trim() || players[1].name,
+        player1_metrics: toMetrics(metrics[0]),
+        player2_metrics: toMetrics(metrics[1]),
+        observations
+      });
+      setEvaluations(await academicApi.listEvaluations(session));
+      setPlayer1Name(""); setPlayer2Name(""); setObservations(""); setEditingId(null);
+    } catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível salvar."); }
+    finally { setAcademicBusy(false); }
+  }
+
+  function editEvaluation(item: AcademicEvaluation) {
+    setEditingId(item.id); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(item.observations || "");
+  }
+
+  async function removeEvaluation(id: string) {
+    if (!session || !window.confirm("Excluir esta avaliação?")) return;
+    setAcademicBusy(true); setAcademicError("");
+    try { await academicApi.deleteEvaluation(session, id); setEvaluations(await academicApi.listEvaluations(session)); }
+    catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível excluir."); }
+    finally { setAcademicBusy(false); }
+  }
+
+  async function logoutAcademic() {
+    await academicApi.signOut(); setSession(null); setEvaluations([]); setAcademicError("");
+  }
 
   const winner = useMemo(() => {
     const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
@@ -222,6 +281,32 @@ export default function App() {
             {concepts.map(({ title, icon: Icon, text }) => <article className="concept-card panel" key={title}><span className="concept-icon"><Icon size={23}/></span><h3>{title}</h3><p>{text}</p></article>)}
           </div>
           <div className="academic-note"><Sparkles size={19}/><p><strong>Para refletir:</strong> quais estratégias você utilizou para lembrar a posição das cartas? O que ajudou ou atrapalhou sua concentração?</p></div>
+          <section className="academic-workspace panel">
+            {!session ? <form className="academic-login" onSubmit={handleAcademicLogin}>
+              <p className="eyebrow purple">ACESSO RESTRITO</p><h2>Área de avaliação acadêmica</h2>
+              <p>Entre com o e-mail e a senha cadastrados. O acesso é limitado às três avaliadoras autorizadas.</p>
+              <label className="field"><span>E-MAIL</span><input type="email" autoComplete="username" required value={loginEmail} onChange={e=>setLoginEmail(e.target.value)} placeholder="seuemail@exemplo.com"/></label>
+              <label className="field"><span>SENHA</span><input type="password" autoComplete="current-password" required value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} placeholder="Sua senha"/></label>
+              {academicError && <p className="academic-error" role="alert">{academicError}</p>}
+              <button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Entrando..." : "Entrar na área acadêmica"}</button>
+            </form> : <div className="academic-dashboard">
+              <div className="academic-dashboard-head"><div><p className="eyebrow purple">AMBIENTE DAS AVALIADORAS</p><h2>Registros e observações</h2><p>Sessão: {session.email}</p></div><button className="secondary" onClick={logoutAcademic}>Sair</button></div>
+              <form className="evaluation-form" onSubmit={handleSaveEvaluation}>
+                <h3>{editingId ? "Editar avaliação" : "Nova avaliação"}</h3>
+                <div className="player-fields">
+                  <label className="field"><span>NOME DO JOGADOR 1</span><input value={player1Name} onChange={e=>setPlayer1Name(e.target.value)} placeholder={players[0].name}/></label>
+                  <label className="field"><span>NOME DO JOGADOR 2</span><input value={player2Name} onChange={e=>setPlayer2Name(e.target.value)} placeholder={players[1].name}/></label>
+                </div>
+                <label className="field"><span>OBSERVAÇÕES, TEXTOS E AVALIAÇÃO</span><textarea rows={5} value={observations} onChange={e=>setObservations(e.target.value)} placeholder="Registre observações sobre atenção, memória, percepção, estratégia e comportamentos observados..."/></label>
+                <p className="academic-disclaimer">Os indicadores da partida são comportamentais e didáticos; não constituem diagnóstico nem avaliação neuropsicológica.</p>
+                {academicError && <p className="academic-error" role="alert">{academicError}</p>}
+                <div className="setup-actions"><button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar avaliação"}</button>{editingId && <button type="button" className="secondary" onClick={()=>{setEditingId(null);setPlayer1Name("");setPlayer2Name("");setObservations("");}}>Cancelar edição</button>}</div>
+              </form>
+              <div className="saved-evaluations"><h3>Avaliações registradas</h3>{academicBusy && <p>Carregando...</p>}{!academicBusy && evaluations.length===0 && <p>Nenhuma avaliação salva ainda.</p>}
+                {evaluations.map(item=><article className="saved-evaluation" key={item.id}><div><strong>{item.player1_name} × {item.player2_name}</strong><small>{new Date(item.created_at).toLocaleString("pt-BR")}</small><p>{item.observations || "Sem observações."}</p><small>Precisão: {item.player1_metrics?.precision ?? 0}% × {item.player2_metrics?.precision ?? 0}%</small></div><div className="saved-actions"><button className="secondary" onClick={()=>editEvaluation(item)}>Editar</button><button className="text-button" onClick={()=>removeEvaluation(item.id)}>Excluir</button></div></article>)}
+              </div>
+            </div>}
+          </section>
         </section>
       )}
 
