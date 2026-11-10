@@ -313,7 +313,7 @@ export default function App() {
       )}
 
       <footer className="footer">
-        <div className="footer-credit"><span>IDEALIZADO E DESENVOLVIDO POR</span><strong>Linda Gomes</strong><a className="evelyn-logo-link" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer" aria-label="Instagram Evelyn G. Marketing Digital"><img src="/evelyn-g-marketing.png" alt="Evelyn G. Marketing Digital"/></a><a className="instagram" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer">@evelyn.namidia</a></div>
+        <div className="footer-credit"><span>IDEALIZADO E DESENVOLVIDO POR</span><strong className="signature">Linda Gomes</strong><a className="evelyn-logo-link" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer" aria-label="Instagram Evelyn G. Marketing Digital"><img src="/Logomarca%20Evelyn%20G-%20Fundo%20escuro.png" alt="Evelyn G. Marketing Digital"/></a><a className="instagram" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer">@evelyn.namidia</a></div>
         <div className="footer-meta"><span>Um projeto acadêmico que une conhecimento, tecnologia e aprendizagem.</span><span className="offline-indicator">{online ? <Wifi size={14}/> : <WifiOff size={14}/>} {online ? "Conectado" : "Modo offline"}</span></div>
       </footer>
 
