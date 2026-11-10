@@ -88,6 +88,7 @@ export default function App() {
 
   function startGame() {
     setDeck(makeDeck()); setFlipped([]); setMatched([]); setBoard(Array(9).fill(null));
+    setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
     setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true);
     setMessage(`${players[0].name} começa! Encontre um par de cartas.`);
   }
