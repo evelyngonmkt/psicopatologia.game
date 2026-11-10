@@ -98,12 +98,13 @@ export default function App() {
     setAcademicBusy(true); setAcademicError("");
     const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
     try {
+      const existing = editingId ? evaluations.find((item) => item.id === editingId) : undefined;
       await academicApi.saveEvaluation(session, {
         id: editingId,
         player1_name: player1Name.trim() || players[0].name,
         player2_name: player2Name.trim() || players[1].name,
-        player1_metrics: toMetrics(metrics[0]),
-        player2_metrics: toMetrics(metrics[1]),
+        player1_metrics: existing?.player1_metrics || toMetrics(metrics[0]),
+        player2_metrics: existing?.player2_metrics || toMetrics(metrics[1]),
         observations
       });
       setEvaluations(await academicApi.listEvaluations(session));
@@ -304,7 +305,7 @@ export default function App() {
                 <div className="setup-actions"><button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar avaliação"}</button>{editingId && <button type="button" className="secondary" onClick={()=>{setEditingId(null);setPlayer1Name("");setPlayer2Name("");setObservations("");}}>Cancelar edição</button>}</div>
               </form>
               <div className="saved-evaluations"><h3>Avaliações registradas</h3>{academicBusy && <p>Carregando...</p>}{!academicBusy && evaluations.length===0 && <p>Nenhuma avaliação salva ainda.</p>}
-                {evaluations.map(item=><article className="saved-evaluation" key={item.id}><div><strong>{item.player1_name} × {item.player2_name}</strong><small>{new Date(item.created_at).toLocaleString("pt-BR")}</small><p>{item.observations || "Sem observações."}</p><small>Precisão: {item.player1_metrics?.precision ?? 0}% × {item.player2_metrics?.precision ?? 0}%</small></div><div className="saved-actions"><button className="secondary" onClick={()=>editEvaluation(item)}>Editar</button><button className="text-button" onClick={()=>removeEvaluation(item.id)}>Excluir</button></div></article>)}
+                {evaluations.map(item=><article className="saved-evaluation" key={item.id}><div><strong>{item.player1_name} × {item.player2_name}</strong><small>{new Date(item.created_at).toLocaleString("pt-BR")}</small><p>{item.observations || "Sem observações."}</p><small>Jogador 1: {item.player1_metrics?.pairs ?? 0} pares · {item.player1_metrics?.errors ?? 0} erros · {item.player1_metrics?.moves ?? 0} jogadas · {item.player1_metrics?.precision ?? 0}% de precisão</small><small>Jogador 2: {item.player2_metrics?.pairs ?? 0} pares · {item.player2_metrics?.errors ?? 0} erros · {item.player2_metrics?.moves ?? 0} jogadas · {item.player2_metrics?.precision ?? 0}% de precisão</small></div><div className="saved-actions"><button className="secondary" onClick={()=>editEvaluation(item)}>Editar</button><button className="text-button" onClick={()=>removeEvaluation(item.id)}>Excluir</button></div></article>)}
               </div>
             </div>}
           </section>
