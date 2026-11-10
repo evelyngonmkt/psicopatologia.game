@@ -93,7 +93,7 @@ export default function App() {
     finally { setAcademicBusy(false); }
   }
 
-  async function handleSaveEvaluation(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSaveEvaluation(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (!session) return;
     setAcademicBusy(true); setAcademicError("");
     const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
