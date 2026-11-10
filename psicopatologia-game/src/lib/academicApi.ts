@@ -64,6 +64,30 @@ function saveSession(session: AcademicSession) {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
+async function refreshSession(session: AcademicSession): Promise<AcademicSession> {
+  if (session.expires_at > Math.floor(Date.now() / 1000) + 60) return session;
+  const response = await fetch(\`\${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token\`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: session.refresh_token })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    localStorage.removeItem(SESSION_KEY);
+    throw new Error("Sua sessão expirou. Entre novamente na área acadêmica.");
+  }
+  const renewed: AcademicSession = {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 3600),
+    user: { id: data.user.id, email: data.user.email },
+    email: String(data.user.email).toLowerCase()
+  };
+  Object.assign(session, renewed);
+  saveSession(renewed);
+  return session;
+}
+
 async function request(path: string, session: AcademicSession, options: RequestInit = {}) {
   ensureConfig();
   const response = await fetch(\`\${SUPABASE_URL}/rest/v1/\${path}\`, {
