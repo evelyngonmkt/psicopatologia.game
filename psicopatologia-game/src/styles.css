@@ -7,3 +7,30 @@
 .evelyn-logo-link{display:flex;align-items:center;justify-content:center;background:transparent;border:0;border-radius:0;padding:0}.evelyn-logo-link img{display:block;width:150px;height:auto;max-height:54px;object-fit:contain;background:transparent}.footer-credit strong{font-family:Manrope,sans-serif;color:var(--purple);font-size:16px}.footer-meta{max-width:560px;line-height:1.6}
 
 .performance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.performance-card{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fcfaff;color:#766b8e;font-size:12px}.performance-card strong{font-size:14px;color:var(--purple)}.performance-card small{margin-top:3px;color:#7254bb;font-weight:800}@media(max-width:600px){.performance-grid{grid-template-columns:1fr}}
+
+
+.academic-workspace{margin-top:24px;padding:28px}
+.academic-login{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:15px}
+.academic-login h2,.academic-dashboard h2{margin:0;color:var(--purple);font-family:Manrope,sans-serif}
+.academic-login>p:not(.eyebrow){margin:0 0 5px;color:var(--muted);line-height:1.6}
+.academic-login .field,.evaluation-form .field{margin:0}
+.academic-login .primary{align-self:flex-start}
+.academic-error{padding:12px 15px;border-radius:12px;background:#fff0ef;color:#a43f39;font-size:14px;line-height:1.5}
+.academic-dashboard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.academic-dashboard-head p:last-child{margin:7px 0 0;color:var(--muted);font-size:13px}
+.evaluation-form{display:flex;flex-direction:column;gap:17px;padding:24px 0;border-bottom:1px solid var(--line)}
+.evaluation-form h3,.saved-evaluations h3{margin:0;color:var(--purple);font-family:Manrope,sans-serif;font-size:20px}
+.evaluation-form textarea{width:100%;resize:vertical;border:1.5px solid #e3d9f1;border-radius:16px;padding:15px 17px;font:inherit;font-size:15px;line-height:1.6;color:var(--purple);background:#fcfaff;outline:none}
+.evaluation-form textarea:focus{border-color:var(--violet);box-shadow:0 0 0 3px #7655c91a}
+.academic-disclaimer{margin:-5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.saved-evaluations{padding-top:24px}
+.saved-evaluations>p{color:var(--muted)}
+.saved-evaluation{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:17px 0;border-bottom:1px solid var(--line)}
+.saved-evaluation>div:first-child{min-width:0}
+.saved-evaluation strong{display:block;color:var(--purple);font-size:15px}
+.saved-evaluation small{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.saved-evaluation p{margin:9px 0;color:#6e6385;font-size:14px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.saved-actions{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
+.saved-actions button{padding:9px 12px;font-size:12px}
+button:disabled{opacity:.55;cursor:wait}
+@media(max-width:600px){.academic-workspace{padding:20px}.academic-dashboard-head,.saved-evaluation{flex-direction:column}.academic-login .primary{width:100%}.saved-actions{width:100%}.saved-actions button{flex:1}}
