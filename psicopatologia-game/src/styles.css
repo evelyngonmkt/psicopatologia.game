@@ -34,3 +34,17 @@
 .saved-actions button{padding:9px 12px;font-size:12px}
 button:disabled{opacity:.55;cursor:wait}
 @media(max-width:600px){.academic-workspace{padding:20px}.academic-dashboard-head,.saved-evaluation{flex-direction:column}.academic-login .primary{width:100%}.saved-actions{width:100%}.saved-actions button{flex:1}}
+
+.pending-matches{padding:22px 0 8px;border-bottom:1px solid var(--line)}
+.pending-matches-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pending-matches-heading h3{margin:0;color:var(--purple);font-family:Manrope,sans-serif;font-size:20px}
+.pending-matches-heading>span{padding:7px 11px;border-radius:20px;background:#f1edf8;color:#7254bb;font-size:12px;font-weight:800;white-space:nowrap}
+.pending-matches>p{color:var(--muted);font-size:13px;line-height:1.5}
+.pending-empty{padding:14px 16px;border-radius:14px;background:#faf8fd}
+.pending-match{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;margin:12px 0;border:1px solid var(--line);border-radius:16px;background:#fcfaff}
+.pending-match-data{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pending-match-data strong{color:var(--purple);font-size:15px}
+.pending-match-data small{color:var(--muted);font-size:12px;line-height:1.45}
+.pending-match>button{flex-shrink:0}
+.selected-match-note{margin:-8px 0 0;color:#7254bb;font-size:13px;line-height:1.5}
+@media(max-width:600px){.pending-matches-heading{align-items:flex-start;flex-direction:column}.pending-match{align-items:stretch;flex-direction:column}.pending-match>button{width:100%}}
