@@ -15,12 +15,18 @@ const iconPairs = [
   { pair: "star", face: "✦", label: "Atenção", kind: "surprise" as const },
   { pair: "spiral", face: "◎", label: "Memória", kind: "surprise" as const },
   { pair: "spark", face: "✧", label: "Cognição", kind: "surprise" as const },
+  { pair: "heart", face: "♥", label: "Emoção", kind: "surprise" as const },
+  { pair: "moon", face: "☾", label: "Atenção", kind: "surprise" as const },
+  { pair: "diamond", face: "◆", label: "Reconhecimento", kind: "surprise" as const },
+  { pair: "triangle", face: "▲", label: "Planejamento", kind: "surprise" as const },
+  { pair: "circle", face: "●", label: "Associação", kind: "surprise" as const },
+  { pair: "wave", face: "〰", label: "Aprendizagem", kind: "surprise" as const },
 ];
 
 function makeDeck(): Card[] {
   const cards: Card[] = [];
   iconPairs.forEach((item) => {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       cards.push({ ...item, id: cards.length + 1 });
     }
   });
@@ -32,6 +38,7 @@ const concepts = [
   { title: "Atenção seletiva", icon: Eye, text: "É o processo de priorizar determinados estímulos e filtrar distrações. Observar as cartas viradas exige foco no que é relevante." },
   { title: "Percepção", icon: Target, text: "É a organização e interpretação das informações captadas pelos sentidos. Reconhecer figuras e diferenças faz parte desse processo." },
   { title: "Estratégia", icon: Lightbulb, text: "Envolve planejar ações a partir das informações disponíveis. Cada escolha no tabuleiro considera possibilidades e consequências." },
+  { title: "Memória e hipocampo", icon: Brain, text: "O hipocampo participa da formação e consolidação de novas memórias. O jogo permite observar comportamentos relacionados à lembrança e à aprendizagem, mas não mede a atividade cerebral nem avalia o funcionamento dessa estrutura." },
 ];
 
 export default function App() {
@@ -184,7 +191,7 @@ export default function App() {
             </section>
 
             <section className="panel cards-panel">
-              <div className="panel-title"><div><h2>Cartas da memória</h2><p>Observe bem onde cada figura aparece. São 24 cartas: pares de X, O e figuras-surpresa.</p></div><span className="counter">{matched.length / 2} / 12 pares</span></div>
+              <div className="panel-title"><div><h2>Cartas da memória</h2><p>Observe bem onde cada figura aparece. São 24 cartas, organizadas em 12 pares de X, O e figuras-surpresa.</p></div><span className="counter">{matched.length / 2} / 12 pares</span></div>
               <div className="cards-grid">
                 {deck.map((card) => {
                   const isUp = flipped.includes(card.id) || matched.includes(card.id);
@@ -199,7 +206,7 @@ export default function App() {
           </div>
 
           <div className="tip"><Lightbulb size={20}/><span><strong>Dica:</strong> preste atenção também nas cartas viradas pelo outro jogador. Sua memória pode guardar informações mesmo quando não é sua vez!</span></div>
-          <section className="panel psychology-strip"><div className="psych-title"><h2>Um toque de Psicologia</h2><span>✦</span></div><div className="concept-chips"><span>Freud tentando lembrar o sonho: 🤔</span><span>Atenção seletiva ativada 👀</span><span>O hipocampo trabalhando 🧠</span><span>Ψ Psicologia em jogo!</span></div></section>
+          <section className="panel psychology-strip"><div className="psych-title"><h2>Um toque de Psicologia</h2><span>✦</span></div><div className="concept-chips"><span>Memória em ação 🧠</span><span>Atenção seletiva ativada 👀</span><span>Aprendizagem em construção ✨</span><span>Ψ Psicologia em jogo!</span></div></section>
         </section>
       ) : (
         <section className="content academic">
@@ -212,8 +219,8 @@ export default function App() {
       )}
 
       <footer className="footer">
-        <div className="footer-credit"><span>REALIZAÇÃO</span><a className="evelyn-logo-link" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer" aria-label="Instagram Evelyn G. Marketing Digital"><img src="/evelyn-g-marketing.png" alt="Evelyn G. Marketing Digital"/></a><a className="instagram" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer">@evelyn.namidia</a></div>
-        <div className="footer-meta"><span>Jogo da Velha Memória</span><span>Psicologia · Memória · Estratégia</span><span className="offline-indicator">{online ? <Wifi size={14}/> : <WifiOff size={14}/>} {online ? "Conectado" : "Modo offline"}</span></div>
+        <div className="footer-credit"><span>IDEALIZADO E DESENVOLVIDO POR</span><strong>Linda Gomes</strong><a className="evelyn-logo-link" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer" aria-label="Instagram Evelyn G. Marketing Digital"><img src="/evelyn-g-marketing.png" alt="Evelyn G. Marketing Digital"/></a><a className="instagram" href="https://www.instagram.com/evelyn.namidia" target="_blank" rel="noreferrer">@evelyn.namidia</a></div>
+        <div className="footer-meta"><span>Um projeto acadêmico que une conhecimento, tecnologia e aprendizagem.</span><span className="offline-indicator">{online ? <Wifi size={14}/> : <WifiOff size={14}/>} {online ? "Conectado" : "Modo offline"}</span></div>
       </footer>
 
       {showRules && <div className="modal-backdrop" role="presentation" onClick={() => setShowRules(false)}><section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="rules-title" onClick={(e) => e.stopPropagation()}><button className="close-modal" onClick={() => setShowRules(false)} aria-label="Fechar"><X size={20}/></button><span className="modal-icon"><BookOpen size={24}/></span><h2 id="rules-title">Como jogar?</h2><ol><li>Dois participantes jogam no mesmo dispositivo e escolhem seus nomes.</li><li>Na sua vez, vire duas cartas e tente encontrar um par.</li><li>Ao encontrar um par, escolha uma casa vazia no tabuleiro para marcar seu símbolo.</li><li>Se não encontrar um par, as cartas voltam e a vez passa para o outro jogador.</li><li>Vence a rodada quem formar uma linha com três símbolos iguais — na horizontal, vertical ou diagonal.</li></ol><p className="rule-note">Dica: observe as cartas abertas pelo outro jogador. Memória também é estratégia!</p><button className="primary full" onClick={() => setShowRules(false)}>Entendi <Check size={18}/></button></section></div>}
