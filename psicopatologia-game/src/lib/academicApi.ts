@@ -90,11 +90,12 @@ async function refreshSession(session: AcademicSession): Promise<AcademicSession
 
 async function request(path: string, session: AcademicSession, options: RequestInit = {}) {
   ensureConfig();
+  const activeSession = await refreshSession(session);
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...options,
     headers: {
       apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${activeSession.access_token}`,
       "Content-Type": "application/json",
       Prefer: "return=representation",
       ...options.headers
