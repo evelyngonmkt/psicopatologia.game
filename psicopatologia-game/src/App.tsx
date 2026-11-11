@@ -27,6 +27,13 @@ const iconPairs = [
   { pair: "wave", face: "〰", label: "Aprendizagem", kind: "surprise" as const },
 ];
 
+function getMatchResult(match: Pick<SavedMatch, "player1_name" | "player2_name" | "player1_metrics" | "player2_metrics">): string {
+  const player1Pairs = match.player1_metrics?.pairs || 0;
+  const player2Pairs = match.player2_metrics?.pairs || 0;
+  if (player1Pairs === player2Pairs) return "Empate";
+  return player1Pairs > player2Pairs ? match.player1_name : match.player2_name;
+}
+
 function makeDeck(): Card[] {
   const cards: Card[] = [];
   iconPairs.forEach((item) => {
@@ -429,7 +436,7 @@ export default function App() {
                 <div className="pending-matches-heading"><h3>Partidas aguardando avaliação</h3><span>{savedMatches.length}/5 salvas</span></div>
                 <p>Partidas enviadas ficam disponíveis para as avaliadoras em qualquer dispositivo. Cada sessão reúne até 5 partidas em 10 minutos.</p>
                 {savedMatches.length === 0 ? <p className="pending-empty">Nenhuma partida aguardando avaliação. Salve uma partida na tela do jogo para trazê-la para cá.</p> : savedMatches.map((match) => <article className="pending-match" key={match.id}>
-                  <div className="pending-match-data"><strong>{match.player1_name} × {match.player2_name}</strong><small>{new Date(match.savedAt).toLocaleString("pt-BR")} · {match.difficulty === "hard" ? "Difícil" : match.difficulty === "easy" ? "Fácil" : "Médio"}</small><small>Jogador 1: {match.player1_metrics.pairs} pares · {match.player1_metrics.errors} erros · {match.player1_metrics.moves} jogadas · {match.player1_metrics.precision}% de precisão</small><small>Jogador 2: {match.player2_metrics.pairs} pares · {match.player2_metrics.errors} erros · {match.player2_metrics.moves} jogadas · {match.player2_metrics.precision}% de precisão</small></div>
+                  <div className="pending-match-data"><strong>{match.player1_name} × {match.player2_name}</strong><small>{new Date(match.savedAt).toLocaleString("pt-BR")} · {match.difficulty === "hard" ? "Difícil" : match.difficulty === "easy" ? "Fácil" : "Médio"}</small><small>Jogador 1: {match.player1_metrics.pairs} pares · {match.player1_metrics.errors} erros · {match.player1_metrics.moves} jogadas · {match.player1_metrics.precision}% de precisão</small><small>Jogador 2: {match.player2_metrics.pairs} pares · {match.player2_metrics.errors} erros · {match.player2_metrics.moves} jogadas · {match.player2_metrics.precision}% de precisão</small><small className="pending-match-winner"><strong>Resultado no momento do envio:</strong> {getMatchResult(match) === "Empate" ? "Empate" : `Vencedor: ${getMatchResult(match)}`}</small></div>
                   <button type="button" className="secondary" onClick={() => selectSavedMatch(match)}>Avaliar esta partida</button>
                 </article>)}
               </section>
