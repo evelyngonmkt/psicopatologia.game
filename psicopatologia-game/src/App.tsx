@@ -55,6 +55,7 @@ export default function App() {
   const [previewing, setPreviewing] = useState(false);
   const [observationSession, setObservationSession] = useState<ObservationSession | null>(null);
   const [sessionRemaining, setSessionRemaining] = useState(600);
+  const [selectedAnalysisSessionId, setSelectedAnalysisSessionId] = useState("");
   const [deck, setDeck] = useState<Card[]>(makeDeck);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
@@ -210,6 +211,34 @@ export default function App() {
     await academicApi.signOut(); setSession(null); setEvaluations([]); setAcademicError("");
   }
 
+  const pendingSessionGroups = useMemo(() => {
+    const groups = new Map<string, SavedMatch[]>();
+    savedMatches.forEach((match) => {
+      const key = match.session_id || "legacy";
+      groups.set(key, [...(groups.get(key) || []), match]);
+    });
+    return Array.from(groups.entries()).map(([id, matches]) => ({ id, matches })).sort((a, b) => {
+      const aDate = a.matches[0]?.session_started_at || a.matches[0]?.savedAt || "";
+      const bDate = b.matches[0]?.session_started_at || b.matches[0]?.savedAt || "";
+      return bDate.localeCompare(aDate);
+    });
+  }, [savedMatches]);
+  const selectedAnalysisGroup = pendingSessionGroups.find((group) => group.id === selectedAnalysisSessionId) || pendingSessionGroups[0];
+  const sessionAnalysis = useMemo(() => {
+    if (!selectedAnalysisGroup) return null;
+    const total = (key: "player1_metrics" | "player2_metrics") => selectedAnalysisGroup.matches.reduce((acc, match) => ({
+      attempts: acc.attempts + (match[key]?.attempts || 0),
+      pairs: acc.pairs + (match[key]?.pairs || 0),
+      errors: acc.errors + (match[key]?.errors || 0),
+      moves: acc.moves + (match[key]?.moves || 0)
+    }), { attempts: 0, pairs: 0, errors: 0, moves: 0 });
+    const player1 = total("player1_metrics");
+    const player2 = total("player2_metrics");
+    return {
+      player1: { ...player1, precision: player1.attempts ? Math.round(player1.pairs / player1.attempts * 100) : 0 },
+      player2: { ...player2, precision: player2.attempts ? Math.round(player2.pairs / player2.attempts * 100) : 0 }
+    };
+  }, [selectedAnalysisGroup]);
   const winner = useMemo(() => {
     const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     for (const [a,b,c] of lines) if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
@@ -242,7 +271,7 @@ export default function App() {
   }
 
   function chooseCard(id: number) {
-    if (!started || previewing || roundOver || pendingMove || flipped.length === 2 || flipped.includes(id) || matched.includes(id)) return;
+    if (!started || sessionRemaining <= 0 || previewing || roundOver || pendingMove || flipped.length === 2 || flipped.includes(id) || matched.includes(id)) return;
     const next = [...flipped, id];
     setFlipped(next);
     if (next.length === 2) {
@@ -269,7 +298,7 @@ export default function App() {
   }
 
   function placeMark(index: number) {
-    if (!pendingMove || board[index] || roundOver) return;
+    if (!pendingMove || board[index] || roundOver || sessionRemaining <= 0) return;
     const next = [...board]; next[index] = players[turn].symbol; setBoard(next);
     setMetrics((prev) => prev.map((item, i) => i === turn ? { ...item, moves: item.moves + 1 } : item));
     setPendingMove(false);
@@ -398,6 +427,15 @@ export default function App() {
                   <button type="button" className="secondary" onClick={() => selectSavedMatch(match)}>Avaliar esta partida</button>
                 </article>)}
               </section>
+              {pendingSessionGroups.length > 0 && <section className="session-analysis panel">
+                <div className="pending-matches-heading"><div><p className="eyebrow purple">ANÁLISE CONSOLIDADA</p><h3>Análise da sessão</h3></div><span>{selectedAnalysisGroup?.matches.length || 0} partidas</span></div>
+                <label className="field"><span>SELECIONE A SESSÃO DE OBSERVAÇÃO</span><select value={selectedAnalysisGroup?.id || ""} onChange={(event) => setSelectedAnalysisSessionId(event.target.value)}>{pendingSessionGroups.map((group) => <option key={group.id} value={group.id}>{group.id === "legacy" ? "Partidas antigas deste dispositivo" : new Date(group.matches[0]?.session_started_at || group.matches[0]?.savedAt || Date.now()).toLocaleString("pt-BR")} · {group.matches.length} partidas</option>)}</select></label>
+                {sessionAnalysis && <><div className="analysis-player-grid">
+                  {[{name:selectedAnalysisGroup?.matches[0]?.player1_name || "Jogador 1",metrics:sessionAnalysis.player1},{name:selectedAnalysisGroup?.matches[0]?.player2_name || "Jogador 2",metrics:sessionAnalysis.player2}].map((player) => <article className="analysis-player" key={player.name}><strong>{player.name}</strong><span>{player.metrics.pairs} pares encontrados</span><span>{player.metrics.errors} erros</span><span>{player.metrics.moves} jogadas</span><b>{player.metrics.precision}% de precisão</b></article>)}
+                </div><div className="analysis-bars"><h4>Comparativo da sessão</h4>
+                  {[{label:"Pares encontrados",a:sessionAnalysis.player1.pairs,b:sessionAnalysis.player2.pairs},{label:"Erros",a:sessionAnalysis.player1.errors,b:sessionAnalysis.player2.errors},{label:"Jogadas",a:sessionAnalysis.player1.moves,b:sessionAnalysis.player2.moves},{label:"Precisão (%)",a:sessionAnalysis.player1.precision,b:sessionAnalysis.player2.precision}].map((metric) => { const max=Math.max(metric.a,metric.b,1); return <div className="analysis-metric" key={metric.label}><strong>{metric.label}</strong><div className="analysis-bar-row"><span>J1</span><div className="analysis-track"><i style={{width:`${metric.a/max*100}%`}}/></div><b>{metric.a}{metric.label.includes("%")?"%":""}</b></div><div className="analysis-bar-row"><span>J2</span><div className="analysis-track"><i className="second" style={{width:`${metric.b/max*100}%`}}/></div><b>{metric.b}{metric.label.includes("%")?"%":""}</b></div></div>; })}
+                </div><p className="analysis-reading">{sessionAnalysis.player1.precision === sessionAnalysis.player2.precision ? "Os dois participantes apresentaram a mesma precisão nesta sessão." : sessionAnalysis.player1.precision > sessionAnalysis.player2.precision ? "O Jogador 1 apresentou maior precisão observada nesta sessão." : "O Jogador 2 apresentou maior precisão observada nesta sessão."} Esta comparação descreve somente os resultados registrados no jogo; não representa diagnóstico ou medida isolada de capacidade cognitiva.</p></>}
+              </section>}
               <form className="evaluation-form" onSubmit={handleSaveEvaluation}>
                 <h3>{editingId ? "Editar avaliação" : selectedSavedMatchId ? "Avaliar partida salva" : "Nova avaliação"}</h3>
                 {selectedSavedMatchId && <p className="selected-match-note">Os indicadores desta avaliação serão os dados capturados quando a partida foi salva.</p>}
