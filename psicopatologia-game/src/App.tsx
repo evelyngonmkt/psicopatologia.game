@@ -201,10 +201,10 @@ export default function App() {
   }, [winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startGame() {
-    setDeck(makeDeck()); setFlipped([]); setMatched([]); setBoard(Array(9).fill(null));
+    const nextDeck = makeDeck();
+    setDeck(nextDeck); setFlipped(nextDeck.map((card) => card.id)); setMatched([]); setBoard(Array(9).fill(null));
     setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
     setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setPreviewing(true);
-    setFlipped(deck.map((card) => card.id));
     setMessage("Memorize a posição das cartas!");
   }
 
@@ -246,7 +246,6 @@ export default function App() {
   function resetRound() {
     setBoard(Array(9).fill(null)); const nextDeck = makeDeck(); setDeck(nextDeck); setFlipped(nextDeck.map((card) => card.id)); setMatched([]);
     setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setPreviewing(true); setMessage("Memorize a posição das cartas!"); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
-    setMessage(`${players[0].name} começa uma nova rodada!`);
   }
 
   function resetAll() {
@@ -389,7 +388,7 @@ export default function App() {
         <div className="footer-meta"><span>Um projeto acadêmico que une conhecimento, tecnologia e aprendizagem.</span><span className="offline-indicator">{online ? <Wifi size={14}/> : <WifiOff size={14}/>} {online ? "Conectado" : "Modo offline"}</span></div>
       </footer>
 
-      {showRules && <div className="modal-backdrop" role="presentation" onClick={() => setShowRules(false)}><section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="rules-title" onClick={(e) => e.stopPropagation()}><button className="close-modal" onClick={() => setShowRules(false)} aria-label="Fechar"><X size={20}/></button><span className="modal-icon"><BookOpen size={24}/></span><h2 id="rules-title">Como jogar?</h2><ol><li>Dois participantes jogam no mesmo dispositivo e escolhem seus nomes.</li><li>Na sua vez, vire duas cartas e tente encontrar um par.</li><li>Ao encontrar um par, escolha uma casa vazia no tabuleiro para marcar seu símbolo.</li><li>Se não encontrar um par, as cartas voltam e a vez passa para o outro jogador.</li><li>Vence a rodada quem formar uma linha com três símbolos iguais — na horizontal, vertical ou diagonal.</li></ol><p className="rule-note">Dica: observe as cartas abertas pelo outro jogador. Memória também é estratégia!</p><button className="primary full" onClick={() => setShowRules(false)}>Entendi <Check size={18}/></button></section></div>}
+      {showRules && <div className="modal-backdrop" role="presentation" onClick={() => setShowRules(false)}><section className="modal panel" role="dialog" aria-modal="true" aria-labelledby="rules-title" onClick={(e) => e.stopPropagation()}><button className="close-modal" onClick={() => setShowRules(false)} aria-label="Fechar"><X size={20}/></button><span className="modal-icon"><BookOpen size={24}/></span><h2 id="rules-title">Como jogar?</h2><ol><li>Dois participantes jogam no mesmo dispositivo e escolhem seus nomes.</li><li>Escolha o nível de dificuldade. As cartas serão exibidas por alguns instantes e depois viradas para baixo.</li><li>Na sua vez, vire duas cartas e tente encontrar um par.</li><li>Ao encontrar um par, escolha uma casa vazia no tabuleiro para marcar seu símbolo.</li><li>Se não encontrar um par, as cartas voltam e a vez passa para o outro jogador.</li><li>Vence a rodada quem formar uma linha com três símbolos iguais — na horizontal, vertical ou diagonal.</li></ol><p className="rule-note">Dica: observe as cartas abertas pelo outro jogador. Memória também é estratégia!</p><button className="primary full" onClick={() => setShowRules(false)}>Entendi <Check size={18}/></button></section></div>}
     </main>
   );
 }
