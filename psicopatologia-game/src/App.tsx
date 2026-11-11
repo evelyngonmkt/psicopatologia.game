@@ -50,6 +50,8 @@ export default function App() {
     { name: "Jogador 1", symbol: "X" }, { name: "Jogador 2", symbol: "O" }
   ]);
   const [started, setStarted] = useState(false);
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [previewing, setPreviewing] = useState(false);
   const [deck, setDeck] = useState<Card[]>(makeDeck);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
@@ -81,6 +83,17 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("psicopatologia_saved_matches", JSON.stringify(savedMatches));
   }, [savedMatches]);
+
+  useEffect(() => {
+    if (!previewing) return;
+    const duration = difficulty === "hard" ? 4000 : difficulty === "medium" ? 7000 : 10000;
+    const timer = window.setTimeout(() => {
+      setFlipped([]);
+      setPreviewing(false);
+      setMessage(`${players[0].name} começa! Encontre um par de cartas.`);
+    }, duration);
+    return () => window.clearTimeout(timer);
+  }, [previewing, difficulty]);
 
   useEffect(() => {
     const on = () => setOnline(true);
@@ -190,12 +203,13 @@ export default function App() {
   function startGame() {
     setDeck(makeDeck()); setFlipped([]); setMatched([]); setBoard(Array(9).fill(null));
     setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
-    setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true);
-    setMessage(`${players[0].name} começa! Encontre um par de cartas.`);
+    setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setPreviewing(true);
+    setFlipped(deck.map((card) => card.id));
+    setMessage("Memorize a posição das cartas!");
   }
 
   function chooseCard(id: number) {
-    if (!started || roundOver || pendingMove || flipped.length === 2 || flipped.includes(id) || matched.includes(id)) return;
+    if (!started || previewing || roundOver || pendingMove || flipped.length === 2 || flipped.includes(id) || matched.includes(id)) return;
     const next = [...flipped, id];
     setFlipped(next);
     if (next.length === 2) {
@@ -230,13 +244,13 @@ export default function App() {
   }
 
   function resetRound() {
-    setBoard(Array(9).fill(null)); setDeck(makeDeck()); setFlipped([]); setMatched([]);
-    setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
+    setBoard(Array(9).fill(null)); const nextDeck = makeDeck(); setDeck(nextDeck); setFlipped(nextDeck.map((card) => card.id)); setMatched([]);
+    setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setPreviewing(true); setMessage("Memorize a posição das cartas!"); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
     setMessage(`${players[0].name} começa uma nova rodada!`);
   }
 
   function resetAll() {
-    setStarted(false); setScores([0, 0]); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]); setBoard(Array(9).fill(null)); setDeck(makeDeck());
+    setStarted(false); setPreviewing(false); setScores([0, 0]); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]); setBoard(Array(9).fill(null)); setDeck(makeDeck());
     setFlipped([]); setMatched([]); setTurn(0); setPendingMove(false); setRoundOver(false);
     setMessage("Clique em “Embaralhar e começar” para iniciar a partida.");
   }
@@ -270,6 +284,14 @@ export default function App() {
                 </label>
               ))}
             </div>
+            <div className="difficulty-picker" aria-label="Escolha o nível de dificuldade">
+              <span className="difficulty-label">NÍVEL DE DIFICULDADE</span>
+              <div className="difficulty-options">
+                <button type="button" className={difficulty === "easy" ? "difficulty-option selected" : "difficulty-option"} onClick={() => setDifficulty("easy")} disabled={started && !roundOver}>Fácil</button>
+                <button type="button" className={difficulty === "medium" ? "difficulty-option selected" : "difficulty-option"} onClick={() => setDifficulty("medium")} disabled={started && !roundOver}>Médio</button>
+                <button type="button" className={difficulty === "hard" ? "difficulty-option selected" : "difficulty-option"} onClick={() => setDifficulty("hard")} disabled={started && !roundOver}>Difícil</button>
+              </div>
+            </div>
             <div className="setup-actions">
               <button className="primary" onClick={startGame}>Embaralhar e começar <ChevronRight size={18}/></button>
               <button className="secondary" onClick={() => setShowRules(true)}><CircleHelp size={18}/> Como jogar?</button>
@@ -286,7 +308,7 @@ export default function App() {
             <section className="panel board-panel">
               <div className="panel-title"><div><h2>Tabuleiro</h2><p>Quando encontrar seu par, escolha uma casa vazia.</p></div><span className="tiny-tag">3 × 3</span></div>
               <div className="board">
-                {board.map((mark, index) => <button key={index} className={`board-cell ${mark ? "occupied" : ""} ${mark?.toLowerCase() || ""} ${pendingMove && !mark ? "selectable" : ""}`} onClick={() => placeMark(index)} disabled={!pendingMove || !!mark || roundOver} aria-label={`Casa ${index + 1}${mark ? `, ${mark}` : ", vazia"}`}>{mark && <span>{mark}</span>}</button>)}
+                {board.map((mark, index) => <button key={index} className={`board-cell ${mark ? "occupied" : ""} ${mark?.toLowerCase() || ""} ${pendingMove && !mark ? "selectable" : ""}`} onClick={() => placeMark(index)} disabled={!pendingMove || !!mark || roundOver || previewing} aria-label={`Casa ${index + 1}${mark ? `, ${mark}` : ", vazia"}`}>{mark && <span>{mark}</span>}</button>)}
               </div>
               <div className="score-grid">
                 {players.map((p, i) => <div className="score-card" key={p.symbol}><span>{scores[i]}</span><small>{p.name} · {p.symbol}</small></div>)}
@@ -304,13 +326,13 @@ export default function App() {
               <div className="cards-grid">
                 {deck.map((card) => {
                   const isUp = flipped.includes(card.id) || matched.includes(card.id);
-                  return <button key={card.id} className={`memory-card ${isUp ? "revealed" : ""} ${matched.includes(card.id) ? "matched" : ""}`} onClick={() => chooseCard(card.id)} disabled={!started || isUp || pendingMove || roundOver || flipped.length === 2} aria-label={isUp ? card.label : "Virar carta"}>
+                  return <button key={card.id} className={`memory-card ${isUp ? "revealed" : ""} ${matched.includes(card.id) ? "matched" : ""}`} onClick={() => chooseCard(card.id)} disabled={!started || previewing || isUp || pendingMove || roundOver || flipped.length === 2} aria-label={isUp ? card.label : "Virar carta"}>
                     {isUp ? <><span className={`card-face ${card.pair}`}>{card.face}</span><small>{card.label}</small></> : <span className="card-back">Ψ</span>}
                   </button>;
                 })}
               </div>
               {!started && <div className="cards-overlay"><Brain size={25}/><strong>As cartas estão esperando por você.</strong><span>Boa sorte! ✨</span></div>}
-              {started && <div className="cards-hint"><Sparkles size={16}/> Memorize as posições — até mesmo quando não for sua vez.</div>}
+              {started && <div className="cards-hint"><Sparkles size={16}/> {previewing ? "Memorize a posição de todas as cartas." : "Memorize as posições — até mesmo quando não for sua vez."}</div>}
             </section>
           </div>
 
