@@ -58,3 +58,25 @@ button:disabled{opacity:.55;cursor:wait}
 .difficulty-option.selected{border-color:var(--violet);background:var(--purple);color:#fff;box-shadow:0 5px 14px #39256820}
 .difficulty-option:disabled{cursor:not-allowed;opacity:.65}
 @media(max-width:600px){.difficulty-picker{align-items:flex-start;flex-direction:column;gap:10px}.difficulty-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}.difficulty-option{padding:11px 8px}}
+
+
+.session-clock{margin:14px 0 8px;padding:12px 15px;border:1px solid #e5dcf1;border-radius:14px;background:#fbf9ff;color:#756b8b;font-size:14px}
+.session-clock strong{color:#432d70;font-size:20px;font-variant-numeric:tabular-nums;margin:0 5px}
+.session-analysis{margin:22px 0;padding:22px;border:1px solid #e7def2;border-radius:20px;background:#fff}
+.session-analysis .field{margin:18px 0}
+.session-analysis select{width:100%;border:1px solid #e3d9f1;border-radius:12px;padding:12px;background:#fff;color:#4b3b68;font:inherit}
+.analysis-player-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.analysis-player{display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid #e9e1f2;border-radius:15px;background:#fcfaff;color:#7e7394;font-size:14px}
+.analysis-player strong{color:#432d70;font-size:17px}
+.analysis-player b{color:#5c438c;font-size:18px}
+.analysis-bars{margin-top:20px}
+.analysis-bars h4{margin:0 0 15px;color:#432d70}
+.analysis-metric{margin:14px 0}
+.analysis-metric>strong{display:block;margin-bottom:7px;color:#6f6289;font-size:13px}
+.analysis-bar-row{display:grid;grid-template-columns:28px minmax(0,1fr) 38px;align-items:center;gap:9px;margin:5px 0;color:#817695;font-size:12px}
+.analysis-bar-row b{text-align:right;color:#4b3b68;font-variant-numeric:tabular-nums}
+.analysis-track{height:10px;overflow:hidden;border-radius:20px;background:#f0ebf6}
+.analysis-track i{display:block;height:100%;border-radius:20px;background:#7654aa;min-width:2px}
+.analysis-track i.second{background:#c49bcf}
+.analysis-reading{margin:18px 0 0;padding:14px;border-radius:12px;background:#f8f5fc;color:#6f6289;font-size:13px;line-height:1.6}
+@media(max-width:620px){.analysis-player-grid{grid-template-columns:1fr}.session-analysis{padding:15px}.analysis-bar-row{grid-template-columns:24px minmax(0,1fr) 34px;gap:6px}}
