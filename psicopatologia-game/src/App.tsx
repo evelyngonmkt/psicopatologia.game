@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { academicApi, type AcademicEvaluation, type AcademicMetrics, type AcademicSession } from "./lib/academicApi";
+import { academicApi, type AcademicEvaluation, type AcademicMetrics, type AcademicSession, type PendingMatch } from "./lib/academicApi";
 import {
   Brain, BookOpen, CircleHelp, Eye, Lightbulb, RotateCcw, Sparkles,
   Wifi, WifiOff, X, Check, ChevronRight, Heart, Target
@@ -9,7 +9,8 @@ import {
 type Player = { name: string; symbol: "X" | "O" };
 type Card = { id: number; pair: string; face: string; label: string; kind: "mark" | "surprise" };
 type Tab = "game" | "academic";
-type SavedMatch = { id: string; savedAt: string; player1_name: string; player2_name: string; player1_metrics: AcademicMetrics; player2_metrics: AcademicMetrics; };
+type SavedMatch = { id: string; remoteId?: string; savedAt: string; player1_name: string; player2_name: string; player1_metrics: AcademicMetrics; player2_metrics: AcademicMetrics; session_id?: string; session_started_at?: string; session_ends_at?: string; difficulty?: "easy" | "medium" | "hard"; };
+type ObservationSession = { id: string; startedAt: string; endsAt: string };
 
 const iconPairs = [
   { pair: "x", face: "X", label: "Símbolo X", kind: "mark" as const },
@@ -52,6 +53,8 @@ export default function App() {
   const [started, setStarted] = useState(false);
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [previewing, setPreviewing] = useState(false);
+  const [observationSession, setObservationSession] = useState<ObservationSession | null>(null);
+  const [sessionRemaining, setSessionRemaining] = useState(600);
   const [deck, setDeck] = useState<Card[]>(makeDeck);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<number[]>([]);
@@ -81,8 +84,16 @@ export default function App() {
   const [selectedSavedMatchId, setSelectedSavedMatchId] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("psicopatologia_saved_matches", JSON.stringify(savedMatches));
+    localStorage.setItem("psicopatologia_saved_matches", JSON.stringify(savedMatches.filter((match) => !match.remoteId)));
   }, [savedMatches]);
+
+  useEffect(() => {
+    if (!observationSession) return;
+    const updateRemaining = () => setSessionRemaining(Math.max(0, Math.ceil((new Date(observationSession.endsAt).getTime() - Date.now()) / 1000)));
+    updateRemaining();
+    const timer = window.setInterval(updateRemaining, 1000);
+    return () => window.clearInterval(timer);
+  }, [observationSession]);
 
   useEffect(() => {
     if (!previewing) return;
@@ -106,7 +117,11 @@ export default function App() {
   useEffect(() => {
     if (tab !== "academic" || !session) return;
     setAcademicBusy(true);
-    academicApi.listEvaluations(session).then(setEvaluations).catch((error: Error) => setAcademicError(error.message)).finally(() => setAcademicBusy(false));
+    Promise.all([academicApi.listEvaluations(session), academicApi.listPendingMatches(session)]).then(([saved, pending]) => {
+      setEvaluations(saved);
+      const remote: SavedMatch[] = pending.map((item: PendingMatch) => ({ id: item.id, remoteId: item.id, savedAt: item.saved_at, player1_name: item.player1_name, player2_name: item.player2_name, player1_metrics: item.player1_metrics, player2_metrics: item.player2_metrics, session_id: item.session_id, session_started_at: item.session_started_at, session_ends_at: item.session_ends_at, difficulty: item.difficulty }));
+      setSavedMatches((local) => [...remote, ...local.filter((item) => !item.remoteId)]);
+    }).catch((error: Error) => setAcademicError(error.message)).finally(() => setAcademicBusy(false));
   }, [tab, session]);
 
   async function handleAcademicLogin(e: FormEvent<HTMLFormElement>) {
@@ -116,23 +131,33 @@ export default function App() {
     finally { setAcademicBusy(false); }
   }
 
-  function saveCurrentMatch() {
-    if (!started) return;
-    if (savedMatches.length >= 5) {
-      setMessage("Você já salvou 5 partidas. A administração precisa registrar ou remover uma delas antes de salvar outra.");
+  async function saveCurrentMatch() {
+    if (!started || !observationSession) return;
+    if (sessionRemaining <= 0) { setMessage("O tempo da sessão terminou. Inicie uma nova sessão para continuar."); return; }
+    if (savedMatches.filter((item) => item.session_id === observationSession.id || !item.session_id).length >= 5) {
+      setMessage("Você já salvou 5 partidas nesta sessão.");
       return;
     }
     const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
     const snapshot: SavedMatch = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       savedAt: new Date().toISOString(),
+      session_id: observationSession.id, session_started_at: observationSession.startedAt, session_ends_at: observationSession.endsAt, difficulty,
       player1_name: players[0].name.trim() || "Jogador 1",
       player2_name: players[1].name.trim() || "Jogador 2",
       player1_metrics: toMetrics(metrics[0]),
       player2_metrics: toMetrics(metrics[1])
     };
-    setSavedMatches((current) => [...current, snapshot]);
-    setMessage(`Partida de ${snapshot.player1_name} e ${snapshot.player2_name} salva para avaliação.`);
+    try {
+      const inserted = await academicApi.submitPendingMatch({ session_id: snapshot.session_id!, session_started_at: snapshot.session_started_at!, session_ends_at: snapshot.session_ends_at!, player1_name: snapshot.player1_name, player2_name: snapshot.player2_name, difficulty: snapshot.difficulty!, player1_metrics: snapshot.player1_metrics, player2_metrics: snapshot.player2_metrics });
+      const saved = Array.isArray(inserted) ? inserted[0] : inserted;
+      snapshot.remoteId = saved?.id;
+      setSavedMatches((current) => [...current, snapshot]);
+      setMessage("Partida enviada para avaliação acadêmica com sucesso.");
+    } catch (error) {
+      setSavedMatches((current) => [...current, snapshot]);
+      setMessage(`Não foi possível sincronizar agora. A partida ficou salva neste dispositivo: ${error instanceof Error ? error.message : "erro de conexão"}`);
+    }
   }
 
   function selectSavedMatch(match: SavedMatch) {
@@ -160,7 +185,10 @@ export default function App() {
         observations
       });
       setEvaluations(await academicApi.listEvaluations(session));
-      if (selectedMatch) setSavedMatches((current) => current.filter((item) => item.id !== selectedMatch.id));
+      if (selectedMatch) {
+        if (session && selectedMatch.remoteId) await academicApi.deletePendingMatch(session, selectedMatch.remoteId);
+        setSavedMatches((current) => current.filter((item) => item.id !== selectedMatch.id));
+      }
       setPlayer1Name(""); setPlayer2Name(""); setObservations(""); setEditingId(null); setSelectedSavedMatchId(null);
     } catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível salvar."); }
     finally { setAcademicBusy(false); }
@@ -201,6 +229,11 @@ export default function App() {
   }, [winner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startGame() {
+    if (!observationSession || Date.now() >= new Date(observationSession.endsAt).getTime()) {
+      const startedAt = new Date();
+      setObservationSession({ id: crypto.randomUUID(), startedAt: startedAt.toISOString(), endsAt: new Date(startedAt.getTime() + 10 * 60 * 1000).toISOString() });
+      setSessionRemaining(600);
+    }
     const nextDeck = makeDeck();
     setDeck(nextDeck); setFlipped(nextDeck.map((card) => card.id)); setMatched([]); setBoard(Array(9).fill(null));
     setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
@@ -244,6 +277,7 @@ export default function App() {
   }
 
   function resetRound() {
+    if (!observationSession || sessionRemaining <= 0) { setMessage("A sessão de 10 minutos terminou. Clique em “Embaralhar e começar” para iniciar outra."); return; }
     setBoard(Array(9).fill(null)); const nextDeck = makeDeck(); setDeck(nextDeck); setFlipped(nextDeck.map((card) => card.id)); setMatched([]);
     setTurn(0); setPendingMove(false); setRoundOver(false); setStarted(true); setPreviewing(true); setMessage("Memorize a posição das cartas!"); setMetrics([{ attempts: 0, pairs: 0, errors: 0, moves: 0 }, { attempts: 0, pairs: 0, errors: 0, moves: 0 }]);
   }
@@ -316,7 +350,8 @@ export default function App() {
                 {players.map((p, i) => <div className="performance-card" key={p.symbol}><strong>{p.name}</strong><span>{metrics[i].pairs} pares encontrados</span><span>{metrics[i].errors} tentativas sem par</span><span>{metrics[i].moves} jogadas no tabuleiro</span><small>Precisão nas tentativas: {metrics[i].attempts ? Math.round(metrics[i].pairs / metrics[i].attempts * 100) : 0}%</small></div>)}
               </div>
               <div className="game-message">{pendingMove ? <Sparkles size={17}/> : <Brain size={17}/>} {message}</div>
-              <div className="setup-actions"><button className="primary" onClick={saveCurrentMatch} disabled={!started || !metrics.some((item) => item.attempts > 0 || item.moves > 0) || savedMatches.length >= 5}>Salvar partida para avaliação ({savedMatches.length}/5)</button></div>
+              <div className="session-clock">⏱ Sessão de observação: <strong>{Math.floor(sessionRemaining / 60).toString().padStart(2, "0")}:{(sessionRemaining % 60).toString().padStart(2, "0")}</strong> {sessionRemaining === 0 ? "· Tempo encerrado" : "· 10 minutos"}</div>
+              <div className="setup-actions"><button className="primary" onClick={saveCurrentMatch} disabled={!started || !observationSession || sessionRemaining <= 0 || !metrics.some((item) => item.attempts > 0 || item.moves > 0) || savedMatches.filter((item) => item.session_id === observationSession?.id || !item.session_id).length >= 5}>Salvar partida para avaliação ({savedMatches.length}/5)</button></div>
               <button className="secondary reset-button" onClick={resetRound}><RotateCcw size={17}/> Reiniciar rodada</button>
             </section>
 
@@ -357,9 +392,9 @@ export default function App() {
               <div className="academic-dashboard-head"><div><p className="eyebrow purple">AMBIENTE DAS AVALIADORAS</p><h2>Registros e observações</h2><p>Sessão: {session.email}</p></div><button className="secondary" onClick={logoutAcademic}>Sair</button></div>
               <section className="pending-matches">
                 <div className="pending-matches-heading"><h3>Partidas aguardando avaliação</h3><span>{savedMatches.length}/5 salvas</span></div>
-                <p>As partidas ficam guardadas neste dispositivo até serem registradas no histórico acadêmico.</p>
+                <p>Partidas enviadas ficam disponíveis para as avaliadoras em qualquer dispositivo. Cada sessão reúne até 5 partidas em 10 minutos.</p>
                 {savedMatches.length === 0 ? <p className="pending-empty">Nenhuma partida aguardando avaliação. Salve uma partida na tela do jogo para trazê-la para cá.</p> : savedMatches.map((match) => <article className="pending-match" key={match.id}>
-                  <div className="pending-match-data"><strong>{match.player1_name} × {match.player2_name}</strong><small>{new Date(match.savedAt).toLocaleString("pt-BR")}</small><small>Jogador 1: {match.player1_metrics.pairs} pares · {match.player1_metrics.errors} erros · {match.player1_metrics.moves} jogadas · {match.player1_metrics.precision}% de precisão</small><small>Jogador 2: {match.player2_metrics.pairs} pares · {match.player2_metrics.errors} erros · {match.player2_metrics.moves} jogadas · {match.player2_metrics.precision}% de precisão</small></div>
+                  <div className="pending-match-data"><strong>{match.player1_name} × {match.player2_name}</strong><small>{new Date(match.savedAt).toLocaleString("pt-BR")} · {match.difficulty === "hard" ? "Difícil" : match.difficulty === "easy" ? "Fácil" : "Médio"}</small><small>Jogador 1: {match.player1_metrics.pairs} pares · {match.player1_metrics.errors} erros · {match.player1_metrics.moves} jogadas · {match.player1_metrics.precision}% de precisão</small><small>Jogador 2: {match.player2_metrics.pairs} pares · {match.player2_metrics.errors} erros · {match.player2_metrics.moves} jogadas · {match.player2_metrics.precision}% de precisão</small></div>
                   <button type="button" className="secondary" onClick={() => selectSavedMatch(match)}>Avaliar esta partida</button>
                 </article>)}
               </section>
