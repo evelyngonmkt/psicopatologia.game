@@ -9,7 +9,7 @@ import {
 type Player = { name: string; symbol: "X" | "O" };
 type Card = { id: number; pair: string; face: string; label: string; kind: "mark" | "surprise" };
 type Tab = "game" | "academic";
-type SavedMatch = { id: string; remoteId?: string; savedAt: string; player1_name: string; player2_name: string; player1_metrics: AcademicMetrics; player2_metrics: AcademicMetrics; session_id?: string; session_started_at?: string; session_ends_at?: string; difficulty?: "easy" | "medium" | "hard"; };
+type SavedMatch = { id: string; remoteId?: string; synced?: boolean; savedAt: string; player1_name: string; player2_name: string; player1_metrics: AcademicMetrics; player2_metrics: AcademicMetrics; session_id?: string; session_started_at?: string; session_ends_at?: string; difficulty?: "easy" | "medium" | "hard"; };
 type ObservationSession = { id: string; startedAt: string; endsAt: string };
 
 const iconPairs = [
@@ -87,7 +87,7 @@ export default function App() {
   const [selectedSavedMatchId, setSelectedSavedMatchId] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("psicopatologia_saved_matches", JSON.stringify(savedMatches.filter((match) => !match.remoteId)));
+    localStorage.setItem("psicopatologia_saved_matches", JSON.stringify(savedMatches.filter((match) => !match.remoteId && !match.synced)));
   }, [savedMatches]);
 
   useEffect(() => {
@@ -154,10 +154,9 @@ export default function App() {
       player2_metrics: toMetrics(metrics[1])
     };
     try {
-      const inserted = await academicApi.submitPendingMatch({ client_match_id: snapshot.id, session_id: snapshot.session_id!, session_started_at: snapshot.session_started_at!, session_ends_at: snapshot.session_ends_at!, player1_name: snapshot.player1_name, player2_name: snapshot.player2_name, difficulty: snapshot.difficulty!, player1_metrics: snapshot.player1_metrics, player2_metrics: snapshot.player2_metrics });
-      const saved = Array.isArray(inserted) ? inserted[0] : inserted;
-      snapshot.remoteId = saved?.id;
-      setSavedMatches((current) => current.some((item) => item.id === snapshot.id || item.remoteId === snapshot.remoteId) ? current : [...current, snapshot]);
+      await academicApi.submitPendingMatch({ client_match_id: snapshot.id, session_id: snapshot.session_id!, session_started_at: snapshot.session_started_at!, session_ends_at: snapshot.session_ends_at!, player1_name: snapshot.player1_name, player2_name: snapshot.player2_name, difficulty: snapshot.difficulty!, player1_metrics: snapshot.player1_metrics, player2_metrics: snapshot.player2_metrics });
+      snapshot.synced = true;
+      setSavedMatches((current) => current.some((item) => item.id === snapshot.id) ? current : [...current, snapshot]);
       setMessage("Partida enviada para avaliação acadêmica com sucesso.");
     } catch (error) {
       setSavedMatches((current) => current.some((item) => item.id === snapshot.id) ? current : [...current, snapshot]);
