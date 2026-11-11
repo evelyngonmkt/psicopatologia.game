@@ -20,6 +20,7 @@ export type AcademicMetrics = {
 
 export type PendingMatch = {
   id: string;
+  client_match_id: string;
   session_id: string;
   session_started_at: string;
   session_ends_at: string;
@@ -166,9 +167,9 @@ export const academicApi = {
 
   async submitPendingMatch(input: PendingMatchInput) {
     ensureConfig();
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/pending_matches`, {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/pending_matches?on_conflict=client_match_id`, {
       method: "POST",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
       body: JSON.stringify(input)
     });
     const body = await response.text();
