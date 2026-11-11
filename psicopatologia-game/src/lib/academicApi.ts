@@ -18,6 +18,21 @@ export type AcademicMetrics = {
   precision: number;
 };
 
+export type PendingMatch = {
+  id: string;
+  session_id: string;
+  session_started_at: string;
+  session_ends_at: string;
+  player1_name: string;
+  player2_name: string;
+  difficulty: "easy" | "medium" | "hard";
+  player1_metrics: AcademicMetrics;
+  player2_metrics: AcademicMetrics;
+  saved_at: string;
+};
+
+export type PendingMatchInput = Omit<PendingMatch, "id" | "saved_at">;
+
 export type AcademicEvaluation = {
   id: string;
   evaluator_id: string;
@@ -147,6 +162,30 @@ export const academicApi = {
       }).catch(() => undefined);
     }
     localStorage.removeItem(SESSION_KEY);
+  },
+
+  async submitPendingMatch(input: PendingMatchInput) {
+    ensureConfig();
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/pending_matches`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(input)
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      let message = body;
+      try { message = JSON.parse(body).message || JSON.parse(body).hint || body; } catch { /* keep response text */ }
+      throw new Error(message || "Não foi possível enviar a partida.");
+    }
+    return body ? JSON.parse(body) : null;
+  },
+
+  async listPendingMatches(session: AcademicSession): Promise<PendingMatch[]> {
+    return request("pending_matches?select=*&order=session_started_at.desc,saved_at.asc", session);
+  },
+
+  async deletePendingMatch(session: AcademicSession, id: string) {
+    return request(`pending_matches?id=eq.${encodeURIComponent(id)}`, session, { method: "DELETE" });
   },
 
   async listEvaluations(session: AcademicSession): Promise<AcademicEvaluation[]> {
