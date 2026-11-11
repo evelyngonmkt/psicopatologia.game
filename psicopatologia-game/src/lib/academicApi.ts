@@ -169,7 +169,7 @@ export const academicApi = {
     ensureConfig();
     const response = await fetch(`${SUPABASE_URL}/rest/v1/pending_matches?on_conflict=client_match_id`, {
       method: "POST",
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify(input)
     });
     const body = await response.text();
