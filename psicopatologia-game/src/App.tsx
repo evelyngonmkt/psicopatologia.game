@@ -136,13 +136,13 @@ export default function App() {
 
   async function saveCurrentMatch() {
     if (savingMatchRef.current || !started || !observationSession) return;
-    savingMatchRef.current = true;
-    setIsSavingMatch(true);
     if (sessionRemaining <= 0) { setMessage("O tempo da sessão terminou. Inicie uma nova sessão para continuar."); return; }
     if (savedMatches.filter((item) => item.session_id === observationSession.id || !item.session_id).length >= 5) {
       setMessage("Você já salvou 5 partidas nesta sessão.");
       return;
     }
+    savingMatchRef.current = true;
+    setIsSavingMatch(true);
     const toMetrics = (m: { attempts:number; pairs:number; errors:number; moves:number }): AcademicMetrics => ({ ...m, precision: m.attempts ? Math.round(m.pairs / m.attempts * 100) : 0 });
     const snapshot: SavedMatch = {
       id: crypto.randomUUID(),
