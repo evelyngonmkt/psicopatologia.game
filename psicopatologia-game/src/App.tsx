@@ -203,13 +203,13 @@ export default function App() {
         if (session && selectedMatch.remoteId) await academicApi.deletePendingMatch(session, selectedMatch.remoteId);
         setSavedMatches((current) => current.filter((item) => item.id !== selectedMatch.id));
       }
-      setPlayer1Name(""); setPlayer2Name(""); setObservations(""); setEditingId(null); setSelectedSavedMatchId(null);
+      setPlayer1Name(""); setPlayer2Name(""); setObservations(""); setObservationRatings({ ...emptyRatings }); setEditingId(null); setSelectedSavedMatchId(null);
     } catch (error) { setAcademicError(error instanceof Error ? error.message : "Não foi possível salvar."); }
     finally { setAcademicBusy(false); }
   }
 
   function editEvaluation(item: AcademicEvaluation) {
-    setEditingId(item.id); setSelectedSavedMatchId(null); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(item.observations || "");
+    const stored = readStoredObservation(item.observations);\n    setEditingId(item.id); setSelectedSavedMatchId(null); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(stored.notes); setObservationRatings(stored.ratings);
   }
 
   async function removeEvaluation(id: string) {
@@ -467,13 +467,26 @@ export default function App() {
                   <label className="field"><span>NOME DO JOGADOR 1</span><input value={player1Name} onChange={e=>setPlayer1Name(e.target.value)} placeholder={players[0].name}/></label>
                   <label className="field"><span>NOME DO JOGADOR 2</span><input value={player2Name} onChange={e=>setPlayer2Name(e.target.value)} placeholder={players[1].name}/></label>
                 </div>
-                <label className="field"><span>OBSERVAÇÕES, TEXTOS E AVALIAÇÃO</span><textarea rows={5} value={observations} onChange={e=>setObservations(e.target.value)} placeholder="Registre observações sobre atenção, memória, percepção, estratégia e comportamentos observados..."/></label>
-                <p className="academic-disclaimer">Os indicadores da partida são comportamentais e didáticos; não constituem diagnóstico nem avaliação neuropsicológica.</p>
+                <section className="match-observation-form">
+                  <div className="match-observation-heading"><h4>Avaliação geral da dupla</h4><p>Considere a partida inteira, observando a interação entre os dois participantes. Não atribua notas individuais.</p></div>
+                  <p className="rating-scale-note"><strong>Escala de observação:</strong> 0 = não observado; 1 = raramente; 2 = às vezes; 3 = frequentemente; 4 = observado de forma consistente.</p>
+                  <div className="observation-rating-list">
+                    {ratingDimensions.map((dimension) => <label className="observation-rating" key={dimension.key}>
+                      <span><strong>{dimension.label}</strong><small>{dimension.description}</small></span>
+                      <select aria-label={`Avaliação de ${dimension.label}`} value={observationRatings[dimension.key]} onChange={(event) => setObservationRatings((current) => ({ ...current, [dimension.key]: Number(event.target.value) }))}>
+                        <option value={0}>0 · Não observado</option><option value={1}>1 · Raramente</option><option value={2}>2 · Às vezes</option><option value={3}>3 · Frequentemente</option><option value={4}>4 · Consistentemente</option>
+                      </select>
+                    </label>)}
+                  </div>
+                  <div className="hippocampus-context"><strong>Memória e hipocampo</strong><p>Contextualização teórica: o hipocampo participa da formação e consolidação de memórias. O jogo não mede sua atividade nem permite avaliar seu funcionamento.</p></div>
+                </section>
+                <label className="field"><span>OBSERVAÇÕES GERAIS DA PARTIDA</span><textarea rows={5} value={observations} onChange={e=>setObservations(e.target.value)} placeholder="Descreva como a dupla realizou a atividade, quais comportamentos chamaram atenção e em que momentos eles apareceram..."/></label>
+                <p className="academic-disclaimer">A escala é um roteiro descritivo criado para esta atividade, não é instrumento psicológico validado e não permite diagnóstico.</p>
                 {academicError && <p className="academic-error" role="alert">{academicError}</p>}
-                <div className="setup-actions"><button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar avaliação"}</button>{(editingId || selectedSavedMatchId) && <button type="button" className="secondary" onClick={()=>{setEditingId(null);setSelectedSavedMatchId(null);setPlayer1Name("");setPlayer2Name("");setObservations("");}}>Cancelar</button>}</div>
+                <div className="setup-actions"><button className="primary" type="submit" disabled={academicBusy}>{academicBusy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar avaliação"}</button>{(editingId || selectedSavedMatchId) && <button type="button" className="secondary" onClick={()=>{setEditingId(null);setSelectedSavedMatchId(null);setPlayer1Name("");setPlayer2Name("");setObservations("");setObservationRatings({ ...emptyRatings });}}>Cancelar</button>}</div>
               </form>
               <div className="saved-evaluations"><h3>Avaliações registradas</h3>{academicBusy && <p>Carregando...</p>}{!academicBusy && evaluations.length===0 && <p>Nenhuma avaliação salva ainda.</p>}
-                {evaluations.map(item=><article className="saved-evaluation" key={item.id}><div><strong>{item.player1_name} × {item.player2_name}</strong><small>{new Date(item.created_at).toLocaleString("pt-BR")}</small><p>{item.observations || "Sem observações."}</p><small>Jogador 1: {item.player1_metrics?.pairs ?? 0} pares · {item.player1_metrics?.errors ?? 0} erros · {item.player1_metrics?.moves ?? 0} jogadas · {item.player1_metrics?.precision ?? 0}% de precisão</small><small>Jogador 2: {item.player2_metrics?.pairs ?? 0} pares · {item.player2_metrics?.errors ?? 0} erros · {item.player2_metrics?.moves ?? 0} jogadas · {item.player2_metrics?.precision ?? 0}% de precisão</small></div><div className="saved-actions"><button className="secondary" onClick={()=>editEvaluation(item)}>Editar</button><button className="text-button" onClick={()=>removeEvaluation(item.id)}>Excluir</button></div></article>)}
+                {evaluations.map(item=><article className="saved-evaluation" key={item.id}><div><strong>{item.player1_name} × {item.player2_name}</strong><small>{new Date(item.created_at).toLocaleString("pt-BR")}</small>{(() => { const stored = readStoredObservation(item.observations); return <><div className="saved-observation-chart"><strong>Avaliação geral da dupla</strong>{ratingDimensions.map((dimension) => <div className="saved-rating-row" key={dimension.key}><span>{dimension.label}</span><div className="saved-rating-track"><i style={{width:`${stored.ratings[dimension.key] / 4 * 100}%`}}/></div><b>{stored.ratings[dimension.key]}/4</b></div>)}<p><strong>Observações:</strong> {stored.notes || "Sem observações."}</p></div></>; })()}<small>Jogador 1: {item.player1_metrics?.pairs ?? 0} pares · {item.player1_metrics?.errors ?? 0} erros · {item.player1_metrics?.moves ?? 0} jogadas · {item.player1_metrics?.precision ?? 0}% de precisão</small><small>Jogador 2: {item.player2_metrics?.pairs ?? 0} pares · {item.player2_metrics?.errors ?? 0} erros · {item.player2_metrics?.moves ?? 0} jogadas · {item.player2_metrics?.precision ?? 0}% de precisão</small></div><div className="saved-actions"><button className="secondary" onClick={()=>editEvaluation(item)}>Editar</button><button className="text-button" onClick={()=>removeEvaluation(item.id)}>Excluir</button></div></article>)}
               </div>
             </div>}
           </section>
