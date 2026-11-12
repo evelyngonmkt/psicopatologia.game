@@ -64,7 +64,7 @@ function readStoredObservation(value: string | null | undefined): StoredObservat
   } catch { return { ratings: { ...emptyRatings }, notes: value }; }
 }
 function writeStoredObservation(ratings: ObservationRatings, notes: string): string {
-  return `${notes.trim()}\\n\\n${OBSERVATION_MARKER}${JSON.stringify({ ratings, notes: notes.trim() })}`;
+  return `${notes.trim()}\n\n${OBSERVATION_MARKER}${JSON.stringify({ ratings, notes: notes.trim() })}`;
 }
 
 const concepts = [
@@ -220,7 +220,7 @@ export default function App() {
         player2_name: player2Name.trim() || players[1].name,
         player1_metrics: selectedMatch?.player1_metrics || existing?.player1_metrics || toMetrics(metrics[0]),
         player2_metrics: selectedMatch?.player2_metrics || existing?.player2_metrics || toMetrics(metrics[1]),
-        observations
+        observations: writeStoredObservation(observationRatings, observations)
       });
       setEvaluations(await academicApi.listEvaluations(session));
       if (selectedMatch) {
@@ -233,7 +233,8 @@ export default function App() {
   }
 
   function editEvaluation(item: AcademicEvaluation) {
-    const stored = readStoredObservation(item.observations);\n    setEditingId(item.id); setSelectedSavedMatchId(null); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(stored.notes); setObservationRatings(stored.ratings);
+    const stored = readStoredObservation(item.observations);
+    setEditingId(item.id); setSelectedSavedMatchId(null); setPlayer1Name(item.player1_name); setPlayer2Name(item.player2_name); setObservations(stored.notes); setObservationRatings(stored.ratings);
   }
 
   async function removeEvaluation(id: string) {
