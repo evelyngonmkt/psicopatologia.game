@@ -80,3 +80,25 @@ button:disabled{opacity:.55;cursor:wait}
 .analysis-track i.second{background:#c49bcf}
 .analysis-reading{margin:18px 0 0;padding:14px;border-radius:12px;background:#f8f5fc;color:#6f6289;font-size:13px;line-height:1.6}
 @media(max-width:620px){.analysis-player-grid{grid-template-columns:1fr}.session-analysis{padding:15px}.analysis-bar-row{grid-template-columns:24px minmax(0,1fr) 34px;gap:6px}}
+
+
+.match-observation-form{padding:20px;border:1px solid var(--line);border-radius:18px;background:#fcfaff}
+.match-observation-heading h4{margin:0 0 6px;color:var(--purple);font:800 18px Manrope,sans-serif}
+.match-observation-heading p,.rating-scale-note{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.rating-scale-note{margin:14px 0;padding:12px 14px;background:#f3eef9;border-radius:12px}
+.observation-rating-list{display:grid;gap:10px}
+.observation-rating{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,230px);align-items:center;gap:14px;padding:13px 14px;border:1px solid #ebe4f3;border-radius:13px;background:#fff}
+.observation-rating strong{display:block;color:var(--purple);font-size:14px}
+.observation-rating small{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.45}
+.observation-rating select{width:100%;padding:10px;border:1px solid #e3d9f1;border-radius:10px;background:#fff;color:#4b3b68;font:inherit;font-size:13px}
+.hippocampus-context{margin-top:12px;padding:14px;border-radius:13px;background:#f2edf8;color:#695b85;font-size:13px;line-height:1.55}
+.hippocampus-context strong{color:var(--purple)}
+.hippocampus-context p{margin:5px 0 0}
+.saved-observation-chart{margin:10px 0;padding:13px;border-radius:13px;background:#faf7fd}
+.saved-observation-chart>strong{margin-bottom:10px}
+.saved-rating-row{display:grid;grid-template-columns:130px minmax(0,1fr) 34px;align-items:center;gap:9px;margin:8px 0;color:var(--muted);font-size:12px}
+.saved-rating-track{height:8px;border-radius:20px;background:#ece6f4;overflow:hidden}
+.saved-rating-track i{display:block;height:100%;border-radius:20px;background:var(--violet)}
+.saved-rating-row b{text-align:right;color:var(--purple)}
+.saved-observation-chart p{margin:12px 0 0;color:#6e6385;font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:620px){.observation-rating{grid-template-columns:1fr}.saved-rating-row{grid-template-columns:105px minmax(0,1fr) 30px}}
