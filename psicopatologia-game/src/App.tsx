@@ -44,6 +44,29 @@ function makeDeck(): Card[] {
   return cards.sort(() => Math.random() - 0.5);
 }
 
+type ObservationRatings = { memory: number; attention: number; perception: number; strategy: number };
+type StoredObservation = { ratings: ObservationRatings; notes: string };
+const OBSERVATION_MARKER = "[[OBSERVACAO_JOGO_V1]]";
+const ratingDimensions = [
+  { key: "memory", label: "Memória", description: "Lembra a localização das cartas e recupera posições já vistas." },
+  { key: "attention", label: "Atenção seletiva", description: "Mantém o foco nas cartas e nas jogadas relevantes." },
+  { key: "perception", label: "Percepção", description: "Reconhece e diferencia os símbolos apresentados." },
+  { key: "strategy", label: "Estratégia", description: "Usa informações anteriores para planejar as escolhas." },
+] as const;
+const emptyRatings: ObservationRatings = { memory: 0, attention: 0, perception: 0, strategy: 0 };
+function readStoredObservation(value: string | null | undefined): StoredObservation {
+  if (!value) return { ratings: { ...emptyRatings }, notes: "" };
+  const markerIndex = value.lastIndexOf(OBSERVATION_MARKER);
+  if (markerIndex < 0) return { ratings: { ...emptyRatings }, notes: value };
+  try {
+    const parsed = JSON.parse(value.slice(markerIndex + OBSERVATION_MARKER.length)) as StoredObservation;
+    return { ratings: { ...emptyRatings, ...parsed.ratings }, notes: parsed.notes || value.slice(0, markerIndex).trim() };
+  } catch { return { ratings: { ...emptyRatings }, notes: value }; }
+}
+function writeStoredObservation(ratings: ObservationRatings, notes: string): string {
+  return `${notes.trim()}\\n\\n${OBSERVATION_MARKER}${JSON.stringify({ ratings, notes: notes.trim() })}`;
+}
+
 const concepts = [
   { title: "Memória", icon: Brain, text: "É a capacidade de codificar, armazenar e recuperar informações. No jogo, ela aparece quando tentamos lembrar onde cada carta está." },
   { title: "Atenção seletiva", icon: Eye, text: "É o processo de priorizar determinados estímulos e filtrar distrações. Observar as cartas viradas exige foco no que é relevante." },
@@ -86,6 +109,7 @@ export default function App() {
   const [player1Name, setPlayer1Name] = useState("");
   const [player2Name, setPlayer2Name] = useState("");
   const [observations, setObservations] = useState("");
+  const [observationRatings, setObservationRatings] = useState<ObservationRatings>({ ...emptyRatings });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [savedMatches, setSavedMatches] = useState<SavedMatch[]>(() => {
     try { return JSON.parse(localStorage.getItem("psicopatologia_saved_matches") || "[]").slice(0, 5) as SavedMatch[]; }
